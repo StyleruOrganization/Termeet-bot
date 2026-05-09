@@ -9,12 +9,6 @@ from aiogram.types import (
 
 
 def get_input_keyboard() -> ReplyKeyboardMarkup:
-    """Reply keyboard to send command messages from the input field.
-
-    Note: Telegram buttons in a ReplyKeyboard send their text as a message.
-    To trigger command handlers the button text must start with a slash,
-    e.g. `/help`.
-    """
     keyboard = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="/meeting")],
         [KeyboardButton(text="/help")],
