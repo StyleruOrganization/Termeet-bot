@@ -4,7 +4,9 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
+from aiogram.exceptions import TelegramBadRequest
 from services.meeting_service import MeetingService
+from utils.callbacks import edit_callback_message_if_needed
 from utils.keyboards import get_inline_keyboard
 
 logger = logging.getLogger(__name__)
@@ -80,8 +82,16 @@ async def create_meeting_callback(callback: CallbackQuery) -> None:
         ]
     )
     
-    await callback.message.edit_text(meeting_text, reply_markup=keyboard)
     await callback.answer()
+
+    if callback.message is None:
+        return
+
+    try:
+        await callback.message.edit_text(meeting_text, reply_markup=keyboard)
+    except TelegramBadRequest as exc:
+        if "message is not modified" not in str(exc).lower():
+            raise
 @router.message(Command("help"))
 async def help_command(message: Message) -> None:
     """Handle /help command - show available commands."""
@@ -121,8 +131,7 @@ async def show_help_callback(callback: CallbackQuery) -> None:
         "5️⃣ После создания встречи вы получите уведомление в этом чате"
     )
     
-    await callback.message.edit_text(help_text, parse_mode="HTML", reply_markup=get_inline_keyboard())
-    await callback.answer()
+    await edit_callback_message_if_needed(callback, help_text)
 
 
 @router.message(Command("about"))
@@ -162,8 +171,7 @@ async def show_about_callback(callback: CallbackQuery) -> None:
         "Для помощи используйте /help"
     )
     
-    await callback.message.edit_text(about_text, parse_mode="HTML", reply_markup=get_inline_keyboard())
-    await callback.answer()
+    await edit_callback_message_if_needed(callback, about_text)
 
 
 @router.message()
