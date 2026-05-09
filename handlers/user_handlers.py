@@ -4,9 +4,8 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
-from config import settings
 from services.meeting_service import MeetingService
-from utils.keyboards import get_input_keyboard, get_inline_keyboard
+from utils.keyboards import get_inline_keyboard
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -31,7 +30,7 @@ async def start_handler(message: Message) -> None:
     
     await message.answer(
         welcome_text,
-        reply_markup=get_input_keyboard()
+        reply_markup=get_inline_keyboard()
     )
 
 
@@ -101,7 +100,7 @@ async def help_command(message: Message) -> None:
         "5️⃣ После создания встречи вы получите уведомление в этом чате"
     )
     
-    await message.answer(help_text, parse_mode="HTML", reply_markup=get_input_keyboard())
+    await message.answer(help_text, parse_mode="HTML", reply_markup=get_inline_keyboard())
 
 
 @router.callback_query(F.data == "show_help")
@@ -128,8 +127,7 @@ async def show_help_callback(callback: CallbackQuery) -> None:
 
 @router.message(Command("about"))
 async def about_command(message: Message) -> None:
-    """Handle /about command (message keyboard).
-    This replies with about info and shows the input keyboard."""
+    """Handle /about command."""
     logger.info(f"User {message.from_user.id} requested about info")
     
     about_text = (
@@ -144,7 +142,7 @@ async def about_command(message: Message) -> None:
         "Для помощи используйте /help"
     )
     
-    await message.answer(about_text, parse_mode="HTML", reply_markup=get_input_keyboard())
+    await message.answer(about_text, parse_mode="HTML", reply_markup=get_inline_keyboard())
 
 
 @router.callback_query(F.data == "show_about")

@@ -1,20 +1,6 @@
 """Keyboard layouts for Termeet Bot."""
 
-from aiogram.types import (
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-)
-
-
-def get_input_keyboard() -> ReplyKeyboardMarkup:
-    keyboard = ReplyKeyboardMarkup(keyboard=[
-        [KeyboardButton(text="/meeting")],
-        [KeyboardButton(text="/help")],
-        [KeyboardButton(text="/start")],
-    ], resize_keyboard=True)
-    return keyboard
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 def get_inline_keyboard() -> InlineKeyboardMarkup:
