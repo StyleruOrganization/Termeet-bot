@@ -37,12 +37,16 @@ class Settings(BaseSettings):
 # Create settings instance
 settings = Settings()
 
+# Create logs directory if it doesn't exist
+logs_dir = Path(__file__).parent / "logs"
+logs_dir.mkdir(exist_ok=True)
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("logs/bot.log"),
+        logging.FileHandler(logs_dir / "bot.log"),
         logging.StreamHandler()
     ]
 )
