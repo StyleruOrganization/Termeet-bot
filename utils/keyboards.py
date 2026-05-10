@@ -26,3 +26,4 @@ def get_inline_keyboard() -> InlineKeyboardMarkup:
         ]
     )
     return keyboard
+    # Тестик
