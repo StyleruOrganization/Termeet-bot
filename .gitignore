@@ -49,3 +49,6 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+termeet.db
+.mypy_cache/

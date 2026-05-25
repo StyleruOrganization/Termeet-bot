@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"c:\\\\Proga\\\\Termeet_bot\\\\bot\\\\database\" \"c:\\\\Proga\\\\Termeet_bot\\\\bot\\\\api\" \"c:\\\\Proga\\\\Termeet_bot\\\\bot\\\\services\" \"c:\\\\Proga\\\\Termeet_bot\\\\bot\\\\handlers\" \"c:\\\\Proga\\\\Termeet_bot\\\\bot\\\\scheduler\")",
+      "Bash(cat > *)"
+    ],
+    "additionalDirectories": [
+      "c:\\Proga\\Termeet_bot\\bot\\database"
+    ]
+  }
+}
