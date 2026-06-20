@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 
 from bot.api.termeet import termeet_client
 from bot.database import queries as db
-from bot.services.ai import parse_slots_from_text
+from bot.services.ai import parse_slots_from_text, AINotAvailableError
 from bot.services.notifications import meeting_url, format_status_card
 
 router = Router()
@@ -22,6 +22,7 @@ class MySlots(StatesGroup):
 
 
 # ── /link_meeting ──────────────────────────────────────────────────────────────
+
 
 @router.message(Command("link_meeting"), StateFilter(default_state))
 async def cmd_link_meeting(message: Message, state: FSMContext):
@@ -72,6 +73,7 @@ async def _do_link(message: Message, hash_: str):
 
 # ── /status ────────────────────────────────────────────────────────────────────
 
+
 @router.message(Command("status"), StateFilter(default_state))
 async def cmd_status(message: Message):
     meeting = await db.get_chat_meeting(message.chat.id)
@@ -107,6 +109,7 @@ async def cmd_status(message: Message):
 
 # ── /my_slots ──────────────────────────────────────────────────────────────────
 
+
 @router.message(Command("my_slots"), StateFilter(default_state))
 async def cmd_my_slots(message: Message, state: FSMContext):
     if message.chat.type == "private":
@@ -136,13 +139,17 @@ async def process_my_slots_hash(message: Message, state: FSMContext):
     except Exception:
         api_data = None
     if not api_data:
-        await message.answer("Встреча не найдена. Проверьте ID и попробуйте снова.")
+        await message.answer(
+            "Встреча не найдена. Проверьте ID и попробуйте снова."
+        )
         return
     await state.update_data(meeting_hash=hash_, meeting_name=api_data["name"])
     await _ask_availability(message, state, hash_, api_data["name"])
 
 
-async def _ask_availability(message: Message, state: FSMContext, hash_: str, name: str):
+async def _ask_availability(
+    message: Message, state: FSMContext, hash_: str, name: str
+):
     await state.update_data(meeting_hash=hash_, meeting_name=name)
     await state.set_state(MySlots.waiting_text)
 
@@ -150,7 +157,8 @@ async def _ask_availability(message: Message, state: FSMContext, hash_: str, nam
         api_data = await termeet_client.get_meeting(hash_)
         user_name = message.from_user.first_name
         current = next(
-            (s for s in api_data.get("slots", []) if s["name"] == user_name), None
+            (s for s in api_data.get("slots", []) if s["name"] == user_name),
+            None,
         )
     except Exception:
         current = None
@@ -186,12 +194,20 @@ async def process_my_slots_text(message: Message, state: FSMContext):
     except Exception:
         date_range = []
 
-    slots = await parse_slots_from_text(message.text, date_range, name)
-
-    if slots is None:
+    try:
+        slots = await parse_slots_from_text(message.text, date_range, name)
+    except AINotAvailableError:
         await message.answer(
-            "❌ Не удалось распознать время. Уточни, например:\n"
-            "<i>«Свободен в понедельник с 15:00 до 18:00»</i>\n\n"
+            "🔧 AI-разбор недоступен (не настроен CLAUDE_API_KEY).\n"
+            "Заполни слоты вручную: " + meeting_url(hash_)
+        )
+        return
+
+    if not slots:
+        await message.answer(
+            "❌ Не смог распознать время. Попробуй уточнить:\n"
+            "<i>«Свободен в понедельник с 15:00 до 18:00»</i>\n"
+            "<i>«Свободен с 19 до 20 каждый день»</i>\n\n"
             "Или заполни вручную: " + meeting_url(hash_)
         )
         return
@@ -204,8 +220,5 @@ async def process_my_slots_text(message: Message, state: FSMContext):
         await message.answer(f"❌ Ошибка при сохранении слотов: {e}")
         return
 
-    if slots:
-        preview = "\n".join(f"  📌 {s[0]} — {s[1]}" for s in slots)
-        await message.answer(f"✅ Слоты сохранены для «{name}»!\n\n{preview}")
-    else:
-        await message.answer("Слоты очищены.")
+    preview = "\n".join(f"  📌 {s[0]} — {s[1]}" for s in slots)
+    await message.answer(f"✅ Слоты сохранены для «{name}»!\n\n{preview}")

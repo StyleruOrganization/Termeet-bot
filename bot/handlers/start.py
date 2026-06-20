@@ -1,3 +1,5 @@
+from pprint import pprint
+
 from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import Command, StateFilter
@@ -23,6 +25,7 @@ async def start_handler(message: Message):
         "🏁 /end_meeting — завершить и получить итоги\n\n"
         "Сайт: termeet.tech"
     )
+    pprint(message.chat.id)
 
 
 @router.message(Command("about"), StateFilter(default_state))

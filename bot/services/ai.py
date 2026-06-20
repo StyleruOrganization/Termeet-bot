@@ -1,38 +1,101 @@
 import json
+import sys
 from datetime import date
 from bot.config import config
 
 
+class AINotAvailableError(Exception):
+    """Raised when CLAUDE_API_KEY is not configured."""
+
+
+def _dates_from_range(data_range: list) -> list[str]:
+    """Extract sorted unique date strings from API dataRange."""
+    seen: set[str] = set()
+    result: list[str] = []
+    for pair in data_range:
+        if pair and pair[0]:
+            d = pair[0][:10]  # "2026-05-27" from "2026-05-27T06:00:00Z"
+            if d not in seen:
+                seen.add(d)
+                result.append(d)
+    return sorted(result)
+
+
 async def parse_slots_from_text(
     user_text: str, meeting_date_range: list, meeting_name: str
-) -> list | None:
-    """Parse natural language availability into API slot pairs via Claude."""
-    if not config.CLAUDE_API_KEY:
-        return None
-    try:
-        import anthropic
+) -> list:
+    """
+    Parse natural language availability into slot pairs via Claude.
 
-        client = anthropic.AsyncAnthropic(api_key=config.CLAUDE_API_KEY)
-        today = date.today().isoformat()
-        system = (
-            f'You are a time-slot parser for meeting scheduler "{meeting_name}".\n'
-            f"Meeting date range: {meeting_date_range}. Today: {today}.\n"
-            "Convert the user's availability description into JSON.\n"
-            "Return ONLY a JSON array of [start, end] pairs in ISO-8601 format "
-            '(YYYY-MM-DDTHH:MM:SS). Example: [["2026-05-27T15:00:00","2026-05-27T18:00:00"]].\n'
-            "If nothing can be parsed, return []."
-        )
+    Returns list of [start, end] pairs (may be empty if Claude can't parse).
+    Raises AINotAvailableError if CLAUDE_API_KEY is not set.
+    """
+    if not config.CLAUDE_API_KEY:
+        raise AINotAvailableError("CLAUDE_API_KEY not configured")
+
+    import anthropic
+
+    client = anthropic.AsyncAnthropic(api_key=config.CLAUDE_API_KEY)
+    today = date.today().isoformat()
+
+    # Give Claude simple date strings instead of raw UTC datetime pairs
+    meeting_dates = _dates_from_range(meeting_date_range)
+    dates_str = ", ".join(meeting_dates) if meeting_dates else "unknown"
+
+    # Build a few example lines based on real dates so Claude knows what to output
+    if meeting_dates:
+        ex_d = meeting_dates[0]
+        example_out = f'[["{ex_d}T19:00:00","{ex_d}T20:00:00"]]'
+        if len(meeting_dates) > 1:
+            ex_d2 = meeting_dates[1]
+            example_out = (
+                f'[["{ex_d}T19:00:00","{ex_d}T20:00:00"],'
+                f'["{ex_d2}T19:00:00","{ex_d2}T20:00:00"]]'
+            )
+    else:
+        example_out = '[["2026-05-27T19:00:00","2026-05-27T20:00:00"]]'
+
+    system = f"""You are a time-slot parser for a Russian Telegram meeting bot.
+Meeting: "{meeting_name}"
+Dates available for this meeting: {dates_str}
+Today: {today}
+
+The user describes in Russian when they are FREE or BUSY.
+Your job: return a JSON array of available [start, end] datetime pairs for the LISTED DATES ONLY.
+
+Rules:
+- Return ONLY a raw JSON array, no explanation, no markdown
+- Format: YYYY-MM-DDTHH:MM:SS (no timezone suffix)
+- "каждый день" / "ежедневно" = one slot per EVERY date listed above
+- "понедельник"/"пн" = find the Monday(s) in the listed dates
+- "вторник"/"вт" = Tuesday(s), etc.
+- "с X до Y" = from X:00:00 to Y:00:00 (treat as local time)
+- "весь день" = 09:00:00 to 21:00:00
+- If user says BUSY/CAN'T (не смогу, занят, не могу) → exclude those days/times
+- If unparseable or nothing available → return []
+
+Example — dates="{dates_str}", user says "свободен с 19 до 20 каждый день":
+{example_out}"""
+
+    try:
         msg = await client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=512,
+            max_tokens=1024,
             system=system,
             messages=[{"role": "user", "content": user_text}],
         )
         raw = msg.content[0].text.strip()
+        # Strip markdown code blocks if Claude wrapped it
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
         slots = json.loads(raw)
-        return slots if isinstance(slots, list) else None
-    except Exception:
-        return None
+        return slots if isinstance(slots, list) else []
+    except Exception as e:
+        print(f"[ai.parse_slots] error: {e!r}", file=sys.stderr, flush=True)
+        return []
 
 
 async def generate_meeting_summary(

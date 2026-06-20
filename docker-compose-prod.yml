@@ -1,0 +1,42 @@
+name: prod-bot
+
+networks:
+  bot-net:
+
+volumes:
+  postgres_data:
+
+services:
+  bot:
+    image: cr.yandex/${CONTAINER_REGISTRY}/bot-prod:latest
+    container_name: bot-prod
+    networks:
+      - bot-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    env_file:
+      - .env
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres-bot-prod
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bot-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+      start_interval: 1s

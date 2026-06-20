@@ -1,0 +1,52 @@
+name: termeet-bot
+
+networks:
+  bot-net:
+
+volumes:
+  postgres_data:
+
+services:
+  bot:
+    build: .
+    container_name: termeet-bot
+    networks:
+      - bot-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    env_file:
+      - .env
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: bot
+          target: /code/bot
+        - action: rebuild
+          path: .env
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: termeet-bot-postgres
+    env_file:
+      - .env
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bot-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+      start_interval: 1s

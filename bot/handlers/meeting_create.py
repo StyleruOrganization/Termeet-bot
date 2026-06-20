@@ -2,7 +2,12 @@ import re
 from datetime import date, timedelta
 
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    Message,
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.state import State, StatesGroup, default_state
 from aiogram.fsm.context import FSMContext
@@ -23,14 +28,14 @@ _TIME_PRESETS: dict[str, tuple[str, str]] = {
 
 # UTC offset presets: callback_data → (offset_hours, label)
 _TZ_PRESETS: dict[str, tuple[int, str]] = {
-    "tz_p2":  ( 2, "UTC+2  Калининград"),
-    "tz_p3":  ( 3, "UTC+3  Москва"),
-    "tz_p4":  ( 4, "UTC+4  Самара"),
-    "tz_p5":  ( 5, "UTC+5  Екатеринбург"),
-    "tz_p6":  ( 6, "UTC+6  Омск"),
-    "tz_p7":  ( 7, "UTC+7  Красноярск"),
-    "tz_p8":  ( 8, "UTC+8  Иркутск"),
-    "tz_p9":  ( 9, "UTC+9  Якутск"),
+    "tz_p2": (2, "UTC+2  Калининград"),
+    "tz_p3": (3, "UTC+3  Москва"),
+    "tz_p4": (4, "UTC+4  Самара"),
+    "tz_p5": (5, "UTC+5  Екатеринбург"),
+    "tz_p6": (6, "UTC+6  Омск"),
+    "tz_p7": (7, "UTC+7  Красноярск"),
+    "tz_p8": (8, "UTC+8  Иркутск"),
+    "tz_p9": (9, "UTC+9  Якутск"),
     "tz_p10": (10, "UTC+10 Владивосток"),
     "tz_p11": (11, "UTC+11 Магадан"),
     "tz_p12": (12, "UTC+12 Камчатка"),
@@ -41,13 +46,13 @@ class MeetCreate(StatesGroup):
     name = State()
     date_from = State()
     date_to = State()
-    time_window = State()        # рабочие часы (локальное время)
-    timezone = State()           # UTC-смещение
+    time_window = State()  # рабочие часы (локальное время)
+    timezone = State()  # UTC-смещение
     duration = State()
     description = State()
-    participants_mode = State()   # выбор: из чата / вручную / пропустить
-    participants_select = State() # выбор из известных участников чата
-    participants = State()        # ручной ввод имён
+    participants_mode = State()  # выбор: из чата / вручную / пропустить
+    participants_select = State()  # выбор из известных участников чата
+    participants = State()  # ручной ввод имён
 
 
 def _parse_date(text: str) -> date | None:
@@ -126,78 +131,120 @@ def _build_data_range(
             e_h -= 24
             e_day = e_base + timedelta(days=1)
 
-        result.append([
-            f"{s_day.isoformat()}T{s_h:02d}:{tf_m:02d}:00Z",
-            f"{e_day.isoformat()}T{e_h:02d}:{tt_m:02d}:00Z",
-        ])
+        result.append(
+            [
+                f"{s_day.isoformat()}T{s_h:02d}:{tf_m:02d}:00Z",
+                f"{e_day.isoformat()}T{e_h:02d}:{tt_m:02d}:00Z",
+            ]
+        )
         current += timedelta(days=1)
     return result
 
 
 def _time_window_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="09:00 – 18:00", callback_data="tw_0918"),
-            InlineKeyboardButton(text="09:00 – 19:00", callback_data="tw_0919"),
-        ],
-        [
-            InlineKeyboardButton(text="10:00 – 18:00", callback_data="tw_1018"),
-            InlineKeyboardButton(text="10:00 – 20:00", callback_data="tw_1020"),
-        ],
-        [
-            InlineKeyboardButton(text="✏️ Своё время", callback_data="tw_custom"),
-        ],
-    ])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="09:00 – 18:00", callback_data="tw_0918"
+                ),
+                InlineKeyboardButton(
+                    text="09:00 – 19:00", callback_data="tw_0919"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="10:00 – 18:00", callback_data="tw_1018"
+                ),
+                InlineKeyboardButton(
+                    text="10:00 – 20:00", callback_data="tw_1020"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✏️ Своё время", callback_data="tw_custom"
+                ),
+            ],
+        ]
+    )
 
 
 def _timezone_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="UTC+2 Калининград",  callback_data="tz_p2"),
-            InlineKeyboardButton(text="UTC+3 Москва",       callback_data="tz_p3"),
-        ],
-        [
-            InlineKeyboardButton(text="UTC+4 Самара",       callback_data="tz_p4"),
-            InlineKeyboardButton(text="UTC+5 Екатеринбург", callback_data="tz_p5"),
-        ],
-        [
-            InlineKeyboardButton(text="UTC+6 Омск",         callback_data="tz_p6"),
-            InlineKeyboardButton(text="UTC+7 Красноярск",   callback_data="tz_p7"),
-        ],
-        [
-            InlineKeyboardButton(text="UTC+8 Иркутск",      callback_data="tz_p8"),
-            InlineKeyboardButton(text="UTC+9 Якутск",       callback_data="tz_p9"),
-        ],
-        [
-            InlineKeyboardButton(text="UTC+10 Владивосток", callback_data="tz_p10"),
-            InlineKeyboardButton(text="UTC+11 Магадан",     callback_data="tz_p11"),
-        ],
-        [
-            InlineKeyboardButton(text="UTC+12 Камчатка",    callback_data="tz_p12"),
-            InlineKeyboardButton(text="✏️ Другой UTC+N",    callback_data="tz_custom"),
-        ],
-    ])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="UTC+2 Калининград", callback_data="tz_p2"
+                ),
+                InlineKeyboardButton(
+                    text="UTC+3 Москва", callback_data="tz_p3"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="UTC+4 Самара", callback_data="tz_p4"
+                ),
+                InlineKeyboardButton(
+                    text="UTC+5 Екатеринбург", callback_data="tz_p5"
+                ),
+            ],
+            [
+                InlineKeyboardButton(text="UTC+6 Омск", callback_data="tz_p6"),
+                InlineKeyboardButton(
+                    text="UTC+7 Красноярск", callback_data="tz_p7"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="UTC+8 Иркутск", callback_data="tz_p8"
+                ),
+                InlineKeyboardButton(
+                    text="UTC+9 Якутск", callback_data="tz_p9"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="UTC+10 Владивосток", callback_data="tz_p10"
+                ),
+                InlineKeyboardButton(
+                    text="UTC+11 Магадан", callback_data="tz_p11"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="UTC+12 Камчатка", callback_data="tz_p12"
+                ),
+                InlineKeyboardButton(
+                    text="✏️ Другой UTC+N", callback_data="tz_custom"
+                ),
+            ],
+        ]
+    )
 
 
 def _duration_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="30 мин", callback_data="dur_30"),
-            InlineKeyboardButton(text="1 час", callback_data="dur_60"),
-        ],
-        [
-            InlineKeyboardButton(text="1.5 часа", callback_data="dur_90"),
-            InlineKeyboardButton(text="2 часа", callback_data="dur_120"),
-        ],
-    ])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="30 мин", callback_data="dur_30"),
+                InlineKeyboardButton(text="1 час", callback_data="dur_60"),
+            ],
+            [
+                InlineKeyboardButton(text="1.5 часа", callback_data="dur_90"),
+                InlineKeyboardButton(text="2 часа", callback_data="dur_120"),
+            ],
+        ]
+    )
 
 
+# Создание встречи
 @router.message(Command("meet"), StateFilter(default_state))
 async def cmd_meet(message: Message, state: FSMContext):
     await state.set_state(MeetCreate.name)
     await message.answer("📅 <b>Создание встречи</b>\n\nКак назовём встречу?")
 
 
+# Выбор даты
 @router.message(MeetCreate.name, F.text)
 async def step_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text.strip())
@@ -212,7 +259,9 @@ async def step_name(message: Message, state: FSMContext):
 async def step_date_from(message: Message, state: FSMContext):
     d = _parse_date(message.text)
     if not d:
-        await message.answer("Не удалось распознать дату. Попробуйте формат ДД.ММ, например: 27.05")
+        await message.answer(
+            "Не удалось распознать дату. Попробуйте формат ДД.ММ, например: 27.05"
+        )
         return
     await state.update_data(date_from=d.isoformat())
     await state.set_state(MeetCreate.date_to)
@@ -223,11 +272,15 @@ async def step_date_from(message: Message, state: FSMContext):
 async def step_date_to(message: Message, state: FSMContext):
     d = _parse_date(message.text)
     if not d:
-        await message.answer("Не удалось распознать дату. Попробуйте формат ДД.ММ, например: 31.05")
+        await message.answer(
+            "Не удалось распознать дату. Попробуйте формат ДД.ММ, например: 31.05"
+        )
         return
     data = await state.get_data()
     if d.isoformat() < data["date_from"]:
-        await message.answer("Конечная дата должна быть не раньше начальной. Попробуйте ещё раз.")
+        await message.answer(
+            "Конечная дата должна быть не раньше начальной. Попробуйте ещё раз."
+        )
         return
     await state.update_data(date_to=d.isoformat())
     await state.set_state(MeetCreate.time_window)
@@ -238,8 +291,7 @@ async def step_date_to(message: Message, state: FSMContext):
     )
 
 
-# ── time_window: preset via button ────────────────────────────────────────────
-
+# Выбор часового пояса
 @router.callback_query(MeetCreate.time_window, F.data.in_(_TIME_PRESETS))
 async def step_time_window_preset(callback: CallbackQuery, state: FSMContext):
     t_from, t_to = _TIME_PRESETS[callback.data]
@@ -263,7 +315,9 @@ async def step_time_window_custom_prompt(callback: CallbackQuery):
 
 @router.message(MeetCreate.time_window, F.text)
 async def step_time_window_custom(message: Message, state: FSMContext):
-    m = re.match(r"^(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})$", message.text.strip())
+    m = re.match(
+        r"^(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})$", message.text.strip()
+    )
     if not m:
         await message.answer(
             "Не распознал формат. Попробуйте: <code>09:00–18:00</code>",
@@ -279,8 +333,7 @@ async def step_time_window_custom(message: Message, state: FSMContext):
     )
 
 
-# ── timezone handlers ─────────────────────────────────────────────────────────
-
+# Выбор часового пояса
 @router.callback_query(MeetCreate.timezone, F.data.in_(_TZ_PRESETS))
 async def step_timezone_preset(callback: CallbackQuery, state: FSMContext):
     offset, label = _TZ_PRESETS[callback.data]
@@ -323,6 +376,7 @@ async def step_timezone_custom(message: Message, state: FSMContext):
     )
 
 
+# Добавление описания встречи
 @router.callback_query(MeetCreate.duration, F.data.startswith("dur_"))
 async def step_duration(callback: CallbackQuery, state: FSMContext):
     minutes = callback.data.split("_")[1]
@@ -330,8 +384,7 @@ async def step_duration(callback: CallbackQuery, state: FSMContext):
     await state.update_data(duration=labels.get(minutes, f"{minutes} мин"))
     await state.set_state(MeetCreate.description)
     await callback.message.edit_text(
-        "📝 Добавьте описание встречи (необязательно).\n"
-        "Или отправьте /skip"
+        "📝 Добавьте описание встречи (необязательно).\n" "Или отправьте /skip"
     )
     await callback.answer()
 
@@ -349,15 +402,28 @@ async def step_description(message: Message, state: FSMContext):
 
 # ── participants_mode ──────────────────────────────────────────────────────────
 
+
 def _participants_mode_kb(chat_type: str) -> InlineKeyboardMarkup:
     rows = []
     if chat_type in ("group", "supergroup"):
-        rows.append([InlineKeyboardButton(
-            text="👥 Из участников чата",
-            callback_data="pm_auto",
-        )])
-    rows.append([InlineKeyboardButton(text="✍️ Ввести вручную", callback_data="pm_manual")])
-    rows.append([InlineKeyboardButton(text="⏭️ Пропустить",    callback_data="pm_skip")])
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text="👥 Из участников чата",
+                    callback_data="pm_auto",
+                )
+            ]
+        )
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text="✍️ Ввести вручную", callback_data="pm_manual"
+            )
+        ]
+    )
+    rows.append(
+        [InlineKeyboardButton(text="⏭️ Пропустить", callback_data="pm_skip")]
+    )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -372,18 +438,30 @@ def _members_select_kb(
         if m.get("last_name"):
             name += f" {m['last_name']}"
         icon = "✅" if uid in sel else "☐"
-        rows.append([InlineKeyboardButton(
-            text=f"{icon} {name}",
-            callback_data=f"msel_{uid}",
-        )])
-    rows.append([InlineKeyboardButton(
-        text=f"✅ Готово ({len(sel)} выбрано)",
-        callback_data="msel_done",
-    )])
-    rows.append([InlineKeyboardButton(
-        text="✍️ Добавить вручную",
-        callback_data="msel_add_manual",
-    )])
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text=f"{icon} {name}",
+                    callback_data=f"msel_{uid}",
+                )
+            ]
+        )
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text=f"✅ Готово ({len(sel)} выбрано)",
+                callback_data="msel_done",
+            )
+        ]
+    )
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text="✍️ Добавить вручную",
+                callback_data="msel_add_manual",
+            )
+        ]
+    )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -425,12 +503,21 @@ async def step_pm_manual(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(MeetCreate.participants_mode, F.data == "pm_skip")
 async def step_pm_skip(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-    await _finish_creation(callback.message, state, [], callback.from_user.id, callback.from_user.first_name)
+    await _finish_creation(
+        callback.message,
+        state,
+        [],
+        callback.from_user.id,
+        callback.from_user.first_name,
+    )
 
 
 # ── participants_select (toggle checkboxes) ────────────────────────────────────
 
-@router.callback_query(MeetCreate.participants_select, F.data.startswith("msel_"))
+
+@router.callback_query(
+    MeetCreate.participants_select, F.data.startswith("msel_")
+)
 async def step_members_toggle(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     members: list[dict] = data["members_list"]
@@ -443,13 +530,20 @@ async def step_members_toggle(callback: CallbackQuery, state: FSMContext):
         # Build participant list from selected members
         sel_set = set(selected_ids)
         participants = [
-            {"name": m["first_name"] + (f" {m['last_name']}" if m.get("last_name") else ""),
-             "tg_user_id": m["tg_user_id"]}
-            for m in members if m["tg_user_id"] in sel_set
+            {
+                "name": m["first_name"]
+                + (f" {m['last_name']}" if m.get("last_name") else ""),
+                "tg_user_id": m["tg_user_id"],
+            }
+            for m in members
+            if m["tg_user_id"] in sel_set
         ]
         await _finish_creation(
-            callback.message, state, participants,
-            callback.from_user.id, callback.from_user.first_name,
+            callback.message,
+            state,
+            participants,
+            callback.from_user.id,
+            callback.from_user.first_name,
         )
         return
 
@@ -482,20 +576,25 @@ async def step_members_toggle(callback: CallbackQuery, state: FSMContext):
 
 # ── participants (manual text input) ──────────────────────────────────────────
 
+
 @router.message(MeetCreate.participants, F.text)
 async def step_participants(message: Message, state: FSMContext):
     names = [p.strip() for p in re.split(r"[,\n]+", message.text) if p.strip()]
     participants = [{"name": n, "tg_user_id": None} for n in names]
     await _finish_creation(
-        message, state, participants,
-        message.from_user.id, message.from_user.first_name,
+        message,
+        state,
+        participants,
+        message.from_user.id,
+        message.from_user.first_name,
     )
 
 
 # ── shared creation logic ─────────────────────────────────────────────────────
 
+
 async def _finish_creation(
-    target,           # Message or callback.message — both have .answer() / .chat
+    target,  # Message or callback.message — both have .answer() / .chat
     state: FSMContext,
     participants: list[dict],  # [{"name": str, "tg_user_id": int | None}]
     creator_id: int,
