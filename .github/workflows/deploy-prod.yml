@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -12,6 +13,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check .env-example changes
+        if: github.event_name == 'push'
+        run: |
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "\.env-example"; then
+            echo "❌ .env-example изменился!"
+            echo ""
+            echo "Обнови .env на сервере, затем перезапусти workflow вручную:"
+            echo "Actions → Deploy Prod → Run workflow"
+            exit 1
+          fi
 
       - name: Login to Yandex Container Registry
         run: |
@@ -24,6 +38,15 @@ jobs:
           docker build -t cr.yandex/${{ secrets.CONTAINER_REGISTRY }}/bot-prod:latest .
           docker push cr.yandex/${{ secrets.CONTAINER_REGISTRY }}/bot-prod:latest
 
+      - name: Copy docker-compose to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "docker-compose-prod.yml"
+          target: "bot-prod"
+
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
         with:
@@ -31,7 +54,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /opt/termeet-bot
+            cd bot-prod
             echo ${{ secrets.Y_TOKEN }} | docker login \
               --username oauth \
               --password-stdin cr.yandex
