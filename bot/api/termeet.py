@@ -4,7 +4,7 @@ from bot.config import config
 
 class TermeetClient:
     def __init__(self):
-        self.base_url = config.BACKEND_API_URL.rstrip("/")
+        self.base_url = config.telegram.BACKEND_API_URL.rstrip("/")
 
     async def create_meeting(
         self,
@@ -47,6 +47,15 @@ class TermeetClient:
         async with aiohttp.ClientSession() as session:
             async with session.patch(
                 f"{self.base_url}/meet/{hash}/slots", json=payload
+            ) as resp:
+                resp.raise_for_status()
+                return await resp.json()
+
+    async def get_all_feedback(self) -> list:
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{self.base_url}/feedback/get-all"
             ) as resp:
                 resp.raise_for_status()
                 return await resp.json()
