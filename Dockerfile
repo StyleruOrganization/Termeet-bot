@@ -32,5 +32,3 @@ COPY pyproject.toml pyproject.toml
 ENV PATH="/code/.venv/bin:$PATH"
 
 COPY bot ./bot
-
-CMD ["python", "-m", "bot.main"]

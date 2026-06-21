@@ -10,6 +10,7 @@ services:
   bot:
     build: .
     container_name: termeet-bot
+    command: python -m bot.main
     networks:
       - bot-net
     depends_on:
@@ -26,7 +27,7 @@ services:
     restart: unless-stopped
     develop:
       watch:
-        - action: sync
+        - action: sync+restart
           path: bot
           target: /code/bot
         - action: rebuild

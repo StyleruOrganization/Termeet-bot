@@ -10,6 +10,7 @@ services:
   bot:
     image: cr.yandex/${CONTAINER_REGISTRY}/bot-prod:latest
     container_name: bot-prod
+    command: python -m bot.main
     networks:
       - bot-net
     depends_on:
