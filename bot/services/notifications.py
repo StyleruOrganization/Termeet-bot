@@ -2,7 +2,7 @@ from bot.config import config
 
 
 def meeting_url(hash: str) -> str:
-    return f"{config.TERMEET_DOMAIN}/meet/{hash}"
+    return f"{config.telegram.TERMEET_DOMAIN}/meet/{hash}"
 
 
 def format_status_card(

@@ -30,12 +30,12 @@ async def parse_slots_from_text(
     Returns list of [start, end] pairs (may be empty if Claude can't parse).
     Raises AINotAvailableError if CLAUDE_API_KEY is not set.
     """
-    if not config.CLAUDE_API_KEY:
+    if not config.claude.API_KEY:
         raise AINotAvailableError("CLAUDE_API_KEY not configured")
 
     import anthropic
 
-    client = anthropic.AsyncAnthropic(api_key=config.CLAUDE_API_KEY)
+    client = anthropic.AsyncAnthropic(api_key=config.claude.API_KEY)
     today = date.today().isoformat()
 
     # Give Claude simple date strings instead of raw UTC datetime pairs
@@ -102,11 +102,11 @@ async def generate_meeting_summary(
     meeting_name: str, notes: list[dict], tasks: list[dict]
 ) -> str:
     """Generate AI summary after meeting ends. Falls back to plain format."""
-    if config.CLAUDE_API_KEY:
+    if config.claude.API_KEY:
         try:
             import anthropic
 
-            client = anthropic.AsyncAnthropic(api_key=config.CLAUDE_API_KEY)
+            client = anthropic.AsyncAnthropic(api_key=config.claude.API_KEY)
             notes_txt = "\n".join(
                 f"- {n['author_name']}: {n['text']}" for n in notes
             ) or "нет заметок"

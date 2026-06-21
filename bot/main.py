@@ -11,13 +11,13 @@ from bot.handlers.meeting_create import router as create_router
 from bot.handlers.meeting_manage import router as manage_router
 from bot.handlers.during_meeting import router as during_router
 from bot.handlers.member_tracker import router as tracker_router
-from bot.handlers.feedback import router as feedback_router, handler_order
+from bot.handlers.feedback import router as feedback_router
+from bot.handlers.feedback import handler_order
 from bot.scheduler.setup import scheduler
-from bot.scheduler import jobs
 from bot.broker import RabbitMQClient
 
 bot = Bot(
-    token=config.TELEGRAM_TOKEN,
+    token=config.telegram.TOKEN,
     default=DefaultBotProperties(parse_mode=ParseMode.HTML),
 )
 
@@ -28,8 +28,8 @@ dp.include_routers(
     create_router,
     manage_router,
     during_router,
-    tracker_router,
     feedback_router,
+    tracker_router,
 )
 
 
