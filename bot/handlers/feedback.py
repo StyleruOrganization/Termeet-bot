@@ -20,8 +20,8 @@ async def handler_order(data: dict, bot: "Bot"):
         f"💥Получен отзыв от {data["contact"]}💥\n"
         f"Чтобы посмотреть используйте команду /feedback"
     )
-    chat_id = config.telegram.CHAT_ID_FOR_FEEDBACK
-    await bot.send_message(chat_id=chat_id, text=text)
+    for chat_id in config.telegram.CHAT_IDS_FOR_FEEDBACK:
+        await bot.send_message(chat_id=chat_id, text=text)
 
 
 @router.message(Command("feedback"), StateFilter(default_state))

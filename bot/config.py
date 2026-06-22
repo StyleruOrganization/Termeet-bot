@@ -16,7 +16,7 @@ class TelegramConfig(ConfigBase):
     model_config = SettingsConfigDict(env_prefix="TELEGRAM_")
 
     TOKEN: str
-    CHAT_ID_FOR_FEEDBACK: int
+    CHAT_IDS_FOR_FEEDBACK: list[int]
     TERMEET_DOMAIN: str
     BACKEND_API_URL: str
 
