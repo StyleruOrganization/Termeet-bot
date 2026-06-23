@@ -27,7 +27,7 @@ services:
     restart: unless-stopped
     develop:
       watch:
-        - action: sync+restart
+        - action: sync+exec
           path: bot
           target: /code/bot
         - action: rebuild
