@@ -1,10 +1,17 @@
 import aiohttp
+from grpc import aio
+from google.protobuf.empty_pb2 import Empty
+
+from bot.grpc.grpc_generated.service_pb2_grpc import FeedbackStub
+from bot.grpc.grpc_generated.service_pb2 import FeedbackResponse
+
 from bot.config import config
 
 
 class TermeetClient:
     def __init__(self):
         self.base_url = config.telegram.BACKEND_API_URL.rstrip("/")
+        self._grpc_channel = None
 
     async def create_meeting(
         self,
@@ -51,7 +58,7 @@ class TermeetClient:
                 resp.raise_for_status()
                 return await resp.json()
 
-    async def get_all_feedback(self) -> list:
+    async def get_all_feedback_json(self) -> list:
 
         async with aiohttp.ClientSession() as session:
             async with session.get(
@@ -59,6 +66,15 @@ class TermeetClient:
             ) as resp:
                 resp.raise_for_status()
                 return await resp.json()
+
+    async def get_all_feedback_grpc(self):
+        if self._grpc_channel is None:
+            self._grpc_channel = aio.insecure_channel('host.docker.internal:50051')
+
+        stub = FeedbackStub(self._grpc_channel)
+        response: FeedbackResponse = await stub.GetAllFeedback(Empty())
+
+        return response
 
 
 termeet_client = TermeetClient()
