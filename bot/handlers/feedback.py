@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+import time
 
 from aiogram import Router
 from aiogram.types import Message
@@ -24,16 +25,36 @@ async def handler_order(data: dict, bot: "Bot"):
         await bot.send_message(chat_id=chat_id, text=text)
 
 
-@router.message(Command("feedback"), StateFilter(default_state))
+@router.message(Command("feedback_json"), StateFilter(default_state))
 async def get_all_feedback(message: Message):
-    feedbacks = await termeet_client.get_all_feedback()
-    if not feedbacks:
-        await message.answer("Отзывов пока нет.")
-        return
-    lines = []
-    for f in feedbacks:
-        lines.append(
-            f"📩 <b>{f['type']}</b> | {f['communication_channel']}: {f['contact']}\n"
-            f"{f['message']}"
-        )
-    await message.answer("Все отзывы:\n\n" + "\n\n".join(lines))
+    start = time.perf_counter()
+    feedbacks = await termeet_client.get_all_feedback_json()
+    end = time.perf_counter()
+    print(f"Time: {end - start}", flush=True)
+
+    # print(feedbacks, flush=True)
+
+    # if not feedbacks:
+    #     await message.answer("Отзывов пока нет.")
+    #     return
+
+    # lines = []
+
+    # for f in feedbacks:
+    #     lines.append(
+    #         f"📩 <b>{f['type']}</b> | {f['communication_channel']}: {f['contact']}\n"
+    #         f"{f['message']}"
+    #     )
+
+    await message.answer("Ответ получен!")
+
+
+@router.message(Command("feedback_grpc"), StateFilter(default_state))
+async def get_all_feedback_grpc(message: Message):
+    start = time.perf_counter()
+    feedbacks = await termeet_client.get_all_feedback_grpc()
+    end = time.perf_counter()
+    print(f"Time: {end - start}", flush=True)
+    print(f"Payload: {feedbacks.ByteSize()}", flush=True)
+
+    await message.answer("Ответ получен!")
