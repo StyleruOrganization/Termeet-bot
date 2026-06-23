@@ -6,7 +6,7 @@ from bot.grpc.grpc_generated.service_pb2_grpc import FeedbackStub
 from bot.grpc.grpc_generated.service_pb2 import FeedbackResponse
 
 from bot.config import config
-
+# Тест-коммент
 
 class TermeetClient:
     def __init__(self):
