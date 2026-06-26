@@ -50,9 +50,9 @@ class MeetCreate(StatesGroup):
     timezone = State()  # UTC-смещение
     duration = State()
     description = State()
-    participants_mode = State()  # выбор: из чата / вручную / пропустить
-    participants_select = State()  # выбор из известных участников чата
-    participants = State()  # ручной ввод имён
+    # participants_mode = State()  # выбор: из чата / вручную / пропустить
+    # participants_select = State()  # выбор из известных участников чата
+    # participants = State()  # ручной ввод имён
 
 
 def _parse_date(text: str) -> date | None:
@@ -394,200 +394,203 @@ async def step_description(message: Message, state: FSMContext):
     if message.text.strip() != "/skip":
         await state.update_data(description=message.text.strip())
     await state.set_state(MeetCreate.participants_mode)
-    await message.answer(
-        "👥 Как добавить участников встречи?",
-        reply_markup=_participants_mode_kb(message.chat.type),
+    await _finish_creation(
+        message,
+        state,
+        [],
+        message.from_user.id,
+        message.from_user.first_name,
     )
 
 
 # ── participants_mode ──────────────────────────────────────────────────────────
 
 
-def _participants_mode_kb(chat_type: str) -> InlineKeyboardMarkup:
-    rows = []
-    if chat_type in ("group", "supergroup"):
-        rows.append(
-            [
-                InlineKeyboardButton(
-                    text="👥 Из участников чата",
-                    callback_data="pm_auto",
-                )
-            ]
-        )
-    rows.append(
-        [
-            InlineKeyboardButton(
-                text="✍️ Ввести вручную", callback_data="pm_manual"
-            )
-        ]
-    )
-    rows.append(
-        [InlineKeyboardButton(text="⏭️ Пропустить", callback_data="pm_skip")]
-    )
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+# def _participants_mode_kb(chat_type: str) -> InlineKeyboardMarkup:
+#     rows = []
+#     if chat_type in ("group", "supergroup"):
+#         rows.append(
+#             [
+#                 InlineKeyboardButton(
+#                     text="👥 Из участников чата",
+#                     callback_data="pm_auto",
+#                 )
+#             ]
+#         )
+#     rows.append(
+#         [
+#             InlineKeyboardButton(
+#                 text="✍️ Ввести вручную", callback_data="pm_manual"
+#             )
+#         ]
+#     )
+#     rows.append(
+#         [InlineKeyboardButton(text="⏭️ Пропустить", callback_data="pm_skip")]
+#     )
+#     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def _members_select_kb(
-    members: list[dict], selected_ids: list[int]
-) -> InlineKeyboardMarkup:
-    sel = set(selected_ids)
-    rows = []
-    for m in members:
-        uid = m["tg_user_id"]
-        name = m["first_name"]
-        if m.get("last_name"):
-            name += f" {m['last_name']}"
-        icon = "✅" if uid in sel else "☐"
-        rows.append(
-            [
-                InlineKeyboardButton(
-                    text=f"{icon} {name}",
-                    callback_data=f"msel_{uid}",
-                )
-            ]
-        )
-    rows.append(
-        [
-            InlineKeyboardButton(
-                text=f"✅ Готово ({len(sel)} выбрано)",
-                callback_data="msel_done",
-            )
-        ]
-    )
-    rows.append(
-        [
-            InlineKeyboardButton(
-                text="✍️ Добавить вручную",
-                callback_data="msel_add_manual",
-            )
-        ]
-    )
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+# def _members_select_kb(
+#     members: list[dict], selected_ids: list[int]
+# ) -> InlineKeyboardMarkup:
+#     sel = set(selected_ids)
+#     rows = []
+#     for m in members:
+#         uid = m["tg_user_id"]
+#         name = m["first_name"]
+#         if m.get("last_name"):
+#             name += f" {m['last_name']}"
+#         icon = "✅" if uid in sel else "☐"
+#         rows.append(
+#             [
+#                 InlineKeyboardButton(
+#                     text=f"{icon} {name}",
+#                     callback_data=f"msel_{uid}",
+#                 )
+#             ]
+#         )
+#     rows.append(
+#         [
+#             InlineKeyboardButton(
+#                 text=f"✅ Готово ({len(sel)} выбрано)",
+#                 callback_data="msel_done",
+#             )
+#         ]
+#     )
+#     rows.append(
+#         [
+#             InlineKeyboardButton(
+#                 text="✍️ Добавить вручную",
+#                 callback_data="msel_add_manual",
+#             )
+#         ]
+#     )
+#     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-@router.callback_query(MeetCreate.participants_mode, F.data == "pm_auto")
-async def step_pm_auto(callback: CallbackQuery, state: FSMContext):
-    chat_id = callback.message.chat.id
-    members = await db.get_chat_members(chat_id)
-    if not members:
-        await callback.answer(
-            "Пока нет данных об участниках чата — бот запоминает всех, "
-            "кто пишет сообщения. Попробуйте позже или введите имена вручную.",
-            show_alert=True,
-        )
-        return
+# @router.callback_query(MeetCreate.participants_mode, F.data == "pm_auto")
+# async def step_pm_auto(callback: CallbackQuery, state: FSMContext):
+#     chat_id = callback.message.chat.id
+#     members = await db.get_chat_members(chat_id)
+#     if not members:
+#         await callback.answer(
+#             "Пока нет данных об участниках чата — бот запоминает всех, "
+#             "кто пишет сообщения. Попробуйте позже или введите имена вручную.",
+#             show_alert=True,
+#         )
+#         return
 
-    # Pre-select everyone
-    selected_ids = [m["tg_user_id"] for m in members]
-    await state.update_data(members_list=members, selected_ids=selected_ids)
-    await state.set_state(MeetCreate.participants_select)
-    await callback.message.edit_text(
-        "👥 Выберите участников встречи\n"
-        "(все выбраны по умолчанию — снимите галочку, чтобы исключить):",
-        reply_markup=_members_select_kb(members, selected_ids),
-    )
-    await callback.answer()
-
-
-@router.callback_query(MeetCreate.participants_mode, F.data == "pm_manual")
-async def step_pm_manual(callback: CallbackQuery, state: FSMContext):
-    await state.set_state(MeetCreate.participants)
-    await callback.message.edit_text(
-        "✍️ Перечислите участников через запятую.\n"
-        "Используйте имена, которыми они представятся на сайте.\n"
-        "Например: <i>Иван, Маша, Петя</i>"
-    )
-    await callback.answer()
+#     # Pre-select everyone
+#     selected_ids = [m["tg_user_id"] for m in members]
+#     await state.update_data(members_list=members, selected_ids=selected_ids)
+#     await state.set_state(MeetCreate.participants_select)
+#     await callback.message.edit_text(
+#         "👥 Выберите участников встречи\n"
+#         "(все выбраны по умолчанию — снимите галочку, чтобы исключить):",
+#         reply_markup=_members_select_kb(members, selected_ids),
+#     )
+#     await callback.answer()
 
 
-@router.callback_query(MeetCreate.participants_mode, F.data == "pm_skip")
-async def step_pm_skip(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await _finish_creation(
-        callback.message,
-        state,
-        [],
-        callback.from_user.id,
-        callback.from_user.first_name,
-    )
+# @router.callback_query(MeetCreate.participants_mode, F.data == "pm_manual")
+# async def step_pm_manual(callback: CallbackQuery, state: FSMContext):
+#     await state.set_state(MeetCreate.participants)
+#     await callback.message.edit_text(
+#         "✍️ Перечислите участников через запятую.\n"
+#         "Используйте имена, которыми они представятся на сайте.\n"
+#         "Например: <i>Иван, Маша, Петя</i>"
+#     )
+#     await callback.answer()
 
 
-# ── participants_select (toggle checkboxes) ────────────────────────────────────
+# @router.callback_query(MeetCreate.participants_mode, F.data == "pm_skip")
+# async def step_pm_skip(callback: CallbackQuery, state: FSMContext):
+#     await callback.answer()
+#     await _finish_creation(
+#         callback.message,
+#         state,
+#         [],
+#         callback.from_user.id,
+#         callback.from_user.first_name,
+#     )
 
 
-@router.callback_query(
-    MeetCreate.participants_select, F.data.startswith("msel_")
-)
-async def step_members_toggle(callback: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    members: list[dict] = data["members_list"]
-    selected_ids: list[int] = data["selected_ids"]
-
-    action = callback.data[5:]  # strip "msel_"
-
-    if action == "done":
-        await callback.answer()
-        # Build participant list from selected members
-        sel_set = set(selected_ids)
-        participants = [
-            {
-                "name": m["first_name"]
-                + (f" {m['last_name']}" if m.get("last_name") else ""),
-                "tg_user_id": m["tg_user_id"],
-            }
-            for m in members
-            if m["tg_user_id"] in sel_set
-        ]
-        await _finish_creation(
-            callback.message,
-            state,
-            participants,
-            callback.from_user.id,
-            callback.from_user.first_name,
-        )
-        return
-
-    if action == "add_manual":
-        await state.set_state(MeetCreate.participants)
-        await callback.message.edit_text(
-            "✍️ Перечислите дополнительных участников через запятую:"
-        )
-        await callback.answer()
-        return
-
-    # Toggle individual member
-    try:
-        uid = int(action)
-    except ValueError:
-        await callback.answer()
-        return
-
-    if uid in selected_ids:
-        selected_ids.remove(uid)
-    else:
-        selected_ids.append(uid)
-
-    await state.update_data(selected_ids=selected_ids)
-    await callback.message.edit_reply_markup(
-        reply_markup=_members_select_kb(members, selected_ids)
-    )
-    await callback.answer()
+# # ── participants_select (toggle checkboxes) ────────────────────────────────────
 
 
-# ── participants (manual text input) ──────────────────────────────────────────
+# @router.callback_query(
+#     MeetCreate.participants_select, F.data.startswith("msel_")
+# )
+# async def step_members_toggle(callback: CallbackQuery, state: FSMContext):
+#     data = await state.get_data()
+#     members: list[dict] = data["members_list"]
+#     selected_ids: list[int] = data["selected_ids"]
+
+#     action = callback.data[5:]  # strip "msel_"
+
+#     if action == "done":
+#         await callback.answer()
+#         # Build participant list from selected members
+#         sel_set = set(selected_ids)
+#         participants = [
+#             {
+#                 "name": m["first_name"]
+#                 + (f" {m['last_name']}" if m.get("last_name") else ""),
+#                 "tg_user_id": m["tg_user_id"],
+#             }
+#             for m in members
+#             if m["tg_user_id"] in sel_set
+#         ]
+#         await _finish_creation(
+#             callback.message,
+#             state,
+#             participants,
+#             callback.from_user.id,
+#             callback.from_user.first_name,
+#         )
+#         return
+
+#     if action == "add_manual":
+#         await state.set_state(MeetCreate.participants)
+#         await callback.message.edit_text(
+#             "✍️ Перечислите дополнительных участников через запятую:"
+#         )
+#         await callback.answer()
+#         return
+
+#     # Toggle individual member
+#     try:
+#         uid = int(action)
+#     except ValueError:
+#         await callback.answer()
+#         return
+
+#     if uid in selected_ids:
+#         selected_ids.remove(uid)
+#     else:
+#         selected_ids.append(uid)
+
+#     await state.update_data(selected_ids=selected_ids)
+#     await callback.message.edit_reply_markup(
+#         reply_markup=_members_select_kb(members, selected_ids)
+#     )
+#     await callback.answer()
 
 
-@router.message(MeetCreate.participants, F.text)
-async def step_participants(message: Message, state: FSMContext):
-    names = [p.strip() for p in re.split(r"[,\n]+", message.text) if p.strip()]
-    participants = [{"name": n, "tg_user_id": None} for n in names]
-    await _finish_creation(
-        message,
-        state,
-        participants,
-        message.from_user.id,
-        message.from_user.first_name,
-    )
+# # ── participants (manual text input) ──────────────────────────────────────────
+
+
+# @router.message(MeetCreate.participants, F.text)
+# async def step_participants(message: Message, state: FSMContext):
+#     names = [p.strip() for p in re.split(r"[,\n]+", message.text) if p.strip()]
+#     participants = [{"name": n, "tg_user_id": None} for n in names]
+#     await _finish_creation(
+#         message,
+#         state,
+#         participants,
+#         message.from_user.id,
+#         message.from_user.first_name,
+#     )
 
 
 # ── shared creation logic ─────────────────────────────────────────────────────
@@ -624,20 +627,20 @@ async def _finish_creation(
         return
 
     hash_ = result["hash"]
-    chat_id = target.chat.id if target.chat.type != "private" else None
+    # chat_id = target.chat.id if target.chat.type != "private" else None
 
-    await db.save_meeting(
-        hash=hash_,
-        chat_id=chat_id,
-        creator_tg_id=creator_id,
-        name=data["name"],
-    )
-    await db.add_participant(hash_, creator_name, creator_id)
-    for p in participants:
-        await db.add_participant(hash_, p["name"], p.get("tg_user_id"))
+    # await db.save_meeting(
+    #     hash=hash_,
+    #     chat_id=chat_id,
+    #     creator_tg_id=creator_id,
+    #     name=data["name"],
+    # )
+    # await db.add_participant(hash_, creator_name, creator_id)
+    # for p in participants:
+    #     await db.add_participant(hash_, p["name"], p.get("tg_user_id"))
 
     url = meeting_url(hash_)
-    names = [p["name"] for p in participants]
+    # names = [p["name"] for p in participants]
     text = (
         f"✅ <b>Встреча создана!</b>\n\n"
         f"📅 {data['name']}\n"
@@ -647,13 +650,13 @@ async def _finish_creation(
         f"\n🔗 <a href='{url}'>Открыть на сайте</a>\n"
         f"🆔 <code>{hash_}</code>"
     )
-    if names:
-        text += f"\n\n👥 Участники: {', '.join(names)}"
+    # if names:
+    #     text += f"\n\n👥 Участники: {', '.join(names)}"
 
     await target.answer(text)
 
-    if chat_id and names:
-        await target.answer(
-            f"📣 {', '.join(names)} — заполните слоты для «{data['name']}»:\n"
-            f"{url}\n\nИли используйте команду /my_slots"
-        )
+    # if chat_id and names:
+    #     await target.answer(
+    #         f"📣 {', '.join(names)} — заполните слоты для «{data['name']}»:\n"
+    #         f"{url}\n\nИли используйте команду /my_slots"
+    #     )
