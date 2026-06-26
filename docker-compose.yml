@@ -1,15 +1,21 @@
-name: termeet-bot
+name: local-bot
 
 networks:
   bot-net:
 
 volumes:
   postgres_data:
+  prometheus_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ./prometheus_data
 
 services:
   bot:
     build: .
-    container_name: termeet-bot
+    container_name: bot-local
     command: python -m bot.main
     networks:
       - bot-net
@@ -27,15 +33,17 @@ services:
     restart: unless-stopped
     develop:
       watch:
-        - action: sync+exec
-          path: bot
+        - action: sync+restart   # ← меняем на sync+restart
+          path: ./bot            # ← путь относительно docker-compose.yml
           target: /code/bot
         - action: rebuild
-          path: .env
+          path: pyproject.toml   # ← rebuild при изменении зависимостей
+        - action: rebuild
+          path: poetry.lock
 
   postgres:
     image: postgres:17-alpine
-    container_name: termeet-bot-postgres
+    container_name: postgres-bot-local
     env_file:
       - .env
     ports:
@@ -51,3 +59,15 @@ services:
       retries: 10
       start_period: 30s
       start_interval: 1s
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus-local
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus_data/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - bot-net
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'

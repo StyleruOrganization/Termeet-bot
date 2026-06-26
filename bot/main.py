@@ -1,7 +1,9 @@
 import asyncio
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from prometheus_client import start_http_server
 
 from bot.config import config
 from bot.set_menu import set_main_menu
@@ -46,6 +48,8 @@ async def on_startup():
 async def main_polling():
     # await init_db()
     await set_main_menu(bot)
+
+    start_http_server(9090)
 
     # # Smart Nagging: every 4 hours
     # scheduler.add_job(
