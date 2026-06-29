@@ -6,6 +6,8 @@ on:
       - dev
   workflow_dispatch:
 
+# Для фикса
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
