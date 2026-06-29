@@ -19,7 +19,7 @@ jobs:
       - name: Check .env-example changes
         if: github.event_name == 'push'
         run: |
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "\.env-example"; then
+          if git diff --name-only HEAD^ HEAD | grep -q "\.env-example"; then
             echo "❌ .env-example изменился!"
             echo ""
             echo "Обнови .env на сервере, затем перезапусти workflow вручную:"
@@ -44,8 +44,9 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose-dev.yml"
+          source: "infra/docker-compose-dev.yml"
           target: "bot-dev"
+          strip_components: 1
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1

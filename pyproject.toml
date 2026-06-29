@@ -17,7 +17,13 @@ dependencies = [
     "aiosqlite (>=0.22.1,<0.23.0)",
     "apscheduler (>=3.11.2,<4.0.0)",
     "anthropic (>=0.111.0,<0.112.0)",
-    "aio-pika (>=9.6.2,<10.0.0)"
+    "aio-pika (>=9.6.2,<10.0.0)",
+    "grpcio (>=1.81.1,<2.0.0)",
+    "grpcio-tools (>=1.81.1,<2.0.0)",
+    "prometheus-client (>=0.25.0,<0.26.0)",
+    "mypy-protobuf (>=5.1.0,<6.0.0)",
+    "aioboto3 (>=15.5.0,<16.0.0)",
+    "types-aioboto3[s3] (>=15.5.0,<16.0.0)"
 ]
 
 [tool.poetry]
