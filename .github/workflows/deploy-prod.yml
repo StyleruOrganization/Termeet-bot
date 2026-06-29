@@ -44,8 +44,9 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose-prod.yml"
+          source: "infra/docker-compose-prod.yml"
           target: "bot-prod"
+          strip_components: 1
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1

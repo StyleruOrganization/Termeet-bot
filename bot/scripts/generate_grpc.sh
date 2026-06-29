@@ -1,0 +1,2 @@
+# scripts/generate_grpc.sh
+python -m grpc_tools.protoc --proto_path=bot/proto --python_out=bot/src/grpc/generated --grpc_python_out=bot/src/grpc/generated --pyi_out=bot/src/grpc/generated bot/proto/*.proto
