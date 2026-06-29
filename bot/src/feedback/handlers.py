@@ -25,6 +25,8 @@ async def handler_order(data: dict, bot: "Bot"):
         f"`{data['message']}`"
     )
 
+    images: list[BufferedInputFile] = []
+
     if data['count_photos'] != 0:
         session = aioboto3.Session()
 
@@ -35,7 +37,6 @@ async def handler_order(data: dict, bot: "Bot"):
                 aws_secret_access_key=config.s3.SECRET_KEY,
                 endpoint_url=config.s3.ENDPOINT,
             ) as client:
-                images: list[BufferedInputFile] = []
                 for i in range(data['count_photos']):
                     s3_object = await client.get_object(Bucket=config.s3.BUCKET_NAME, Key=f"{data['id']}/{data['id']}_{i}.jpg")
                     photo_bytes = await s3_object["Body"].read()
