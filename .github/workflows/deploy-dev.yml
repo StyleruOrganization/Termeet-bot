@@ -48,16 +48,6 @@ jobs:
           target: "bot-dev"
           strip_components: 1
 
-      - name: Copy prometheus to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "prometheus/prometheus.yml"
-          target: "bot-dev"
-          overwrite: true
-
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
         with:
