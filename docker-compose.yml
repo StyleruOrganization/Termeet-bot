@@ -1,0 +1,87 @@
+name: local-bot
+
+networks:
+  bot-net:
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
+services:
+  bot:
+    build: .
+    container_name: bot-local
+    command: python -m bot.src.main
+    networks:
+      - bot-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    env_file:
+      - .env
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./bot
+          target: /code/bot
+        - action: rebuild
+          path: pyproject.toml
+        - action: rebuild
+          path: poetry.lock
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres-bot-local
+    env_file:
+      - .env
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bot-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+      start_interval: 1s
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus-local
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - bot-net
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    depends_on:
+      - bot
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana-local
+    env_file:
+      - .env
+    ports:
+      - "3030:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - bot-net
+    depends_on:
+      - prometheus
+    restart: unless-stopped

@@ -52,3 +52,9 @@ Thumbs.db
 
 termeet.db
 .mypy_cache/
+
+
+# Claude
+.claude/
+
+Заметки.txt
