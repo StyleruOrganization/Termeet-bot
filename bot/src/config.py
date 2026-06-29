@@ -50,12 +50,20 @@ class S3Config(ConfigBase):
     SECRET_KEY: str
 
 
+class GRPCConfig(ConfigBase):
+    model_config = SettingsConfigDict(env_prefix="GRPC_")
+
+    HOST: str
+    PORT: int
+
+
 class Config(ConfigBase):
 
     telegram: TelegramConfig = Field(default_factory=TelegramConfig)
     claude: ClaudeConfig = Field(default_factory=ClaudeConfig)
     rabbitmq: RabbitMQConfig = Field(default_factory=RabbitMQConfig)
     s3: S3Config = Field(default_factory=S3Config)
+    grpc: GRPCConfig = Field(default_factory=GRPCConfig)
 
 
 config = Config()

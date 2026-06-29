@@ -51,7 +51,7 @@ class TermeetClient:
         try:
             if self._grpc_channel is None:
                 self._grpc_channel = aio.insecure_channel(
-                    "host.docker.internal:50051"
+                    f"{config.grpc.HOST}:{config.grpc.PORT}"
                 )
 
             stub = FeedbackGRPCStub(self._grpc_channel)
