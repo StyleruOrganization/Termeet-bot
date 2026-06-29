@@ -29,7 +29,7 @@ services:
 
   postgres:
     image: postgres:17-alpine
-    container_name: postgres-bot-dev
+    container_name: postgres-bot-prod
     env_file:
       - .env
     volumes:
@@ -48,7 +48,7 @@ services:
 
   prometheus:
     image: prom/prometheus
-    container_name: prometheus-local
+    container_name: prometheus-prod
     ports:
       - "9090:9090"
     volumes:
@@ -63,7 +63,7 @@ services:
 
   grafana:
     image: grafana/grafana
-    container_name: grafana-local
+    container_name: grafana-prod
     env_file:
       - .env
     ports:
