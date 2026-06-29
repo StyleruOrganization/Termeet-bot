@@ -56,6 +56,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "prometheus/prometheus.yml"
           target: "bot-dev"
+          overwrite: true
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
